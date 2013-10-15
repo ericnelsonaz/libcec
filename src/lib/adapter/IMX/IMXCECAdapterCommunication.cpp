@@ -182,8 +182,7 @@ uint16_t CIMXCECAdapterCommunication::GetFirmwareVersion(void)
 
 cec_vendor_id CIMXCECAdapterCommunication::GetVendorId(void)
 {
-  /* FIXME TO be implemented : check how */
-  return CEC_VENDOR_PANASONIC;
+  return CEC_VENDOR_UNKNOWN;
 }
 
 
@@ -222,8 +221,7 @@ bool CIMXCECAdapterCommunication::SetLogicalAddresses(const cec_logical_addresse
   if (m_logicalAddress == log_addr)
       return true;
 
-
-  if (m_dev->Ioctl(HDMICEC_IOC_SETLOGICALADDRESS, log_addr) != 0)
+  if (m_dev->Ioctl(HDMICEC_IOC_SETLOGICALADDRESS, (void *)log_addr) != 0)
   {
     LIB_CEC->AddLog(CEC_LOG_ERROR, "%s: HDMICEC_IOC_SETLOGICALADDRESS failed !", __func__);
     return false;
