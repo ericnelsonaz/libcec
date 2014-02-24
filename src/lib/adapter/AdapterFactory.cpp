@@ -149,7 +149,8 @@ IAdapterCommunication *CAdapterFactory::GetInstance(const char *strPort, uint16_
 #endif
 
 #if defined(HAVE_IMX_API)
-  return new CIMXCECAdapterCommunication(m_lib->m_cec);
+  if (!strcmp(strPort, CEC_IMX_VIRTUAL_COM))
+    return new CIMXCECAdapterCommunication(m_lib->m_cec);
 #endif
 
 #if defined(HAVE_P8_USB)
