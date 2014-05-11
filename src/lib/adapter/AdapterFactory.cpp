@@ -52,6 +52,7 @@
 #include "TDA995x/TDA995xCECAdapterCommunication.h"
 #endif
 
+
 #if defined(HAVE_IMX_API)
 #include "IMX/IMXCECAdapterDetection.h"
 #include "IMX/IMXCECAdapterCommunication.h"
@@ -115,6 +116,7 @@ int8_t CAdapterFactory::DetectAdapters(cec_adapter_descriptor *deviceList, uint8
 #endif
 
 
+
 #if defined(HAVE_IMX_API)
   if (iAdaptersFound < iBufSize && CIMXCECAdapterDetection::FindAdapter() &&
       (!strDevicePath || !strcmp(strDevicePath, CEC_IMX_VIRTUAL_COM)))
@@ -129,6 +131,7 @@ int8_t CAdapterFactory::DetectAdapters(cec_adapter_descriptor *deviceList, uint8
 #endif
 
 
+
 #if !defined(HAVE_RPI_API) && !defined(HAVE_P8_USB) && !defined(HAVE_TDA995X_API) && !defined(HAVE_IMX_API)
 #error "libCEC doesn't have support for any type of adapter. please check your build system or configuration"
 #endif
@@ -141,6 +144,11 @@ IAdapterCommunication *CAdapterFactory::GetInstance(const char *strPort, uint16_
 #if defined(HAVE_TDA995X_API)
   if (!strcmp(strPort, CEC_TDA995x_VIRTUAL_COM))
     return new CTDA995xCECAdapterCommunication(m_lib->m_cec);
+#endif
+
+#if defined(HAVE_EXYNOS_API)
+  if (!strcmp(strPort, CEC_EXYNOS_VIRTUAL_COM))
+    return new CExynosCECAdapterCommunication(m_lib->m_cec);
 #endif
 
 #if defined(HAVE_RPI_API)

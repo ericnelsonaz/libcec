@@ -63,6 +63,7 @@ libcec_la_SOURCES += adapter/TDA995x/TDA995xCECAdapterDetection.cpp \
                      adapter/TDA995x/TDA995xCECAdapterCommunication.cpp
 endif
 
+
 ## i.MX6 support
 if USE_IMX_API
 libcec_la_SOURCES += adapter/IMX/IMXCECAdapterDetection.cpp \

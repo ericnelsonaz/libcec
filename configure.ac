@@ -57,6 +57,13 @@ AC_ARG_WITH([tda995x-toolkit-path],
   [TDA995X_CFLAGS="-I$withval/inc"],
   [TDA995X_CFLAGS="-I\$(abs_top_srcdir)/nxp_hdmi/inc"])
 
+## Exynos support
+AC_ARG_ENABLE([exynos],
+  [AS_HELP_STRING([--enable-exynos],
+  [enable support for the Exynos (default is yes)])],
+  [use_exynos=$enableval],
+  [use_exynos=yes])
+
 ## Raspberry Pi support
 AC_ARG_ENABLE([rpi],
   [AS_HELP_STRING([--enable-rpi],
@@ -291,6 +298,7 @@ else
   AM_CONDITIONAL(USE_TDA995X_API, false)
   features="$features\n  TDA995x support :\t\t\tno"
 fi
+
 
 ## mark i.MX6 support as available
 if test "x$use_imx6" != "xno"; then

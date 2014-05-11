@@ -295,6 +295,7 @@ namespace CEC {
 #define CEC_TDA995x_VIRTUAL_COM		"CuBox"
 
 /*!
+
  * the path to use for the i.MX CEC wire
  */
 #define CEC_IMX_PATH		"/dev/mxc_hdmi_cec"
@@ -303,7 +304,6 @@ namespace CEC {
  * the name of the virtual COM port to use for the i.MX CEC wire
  */
 #define CEC_IMX_VIRTUAL_COM		"i.MX"
-
 
 /*!
  * Mimimum client version
