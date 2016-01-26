@@ -411,7 +411,7 @@ AC_SUBST([USE_P8_USB])
 AC_SUBST([USE_P8_USB_DETECT])
 AC_SUBST([USE_RPI_API])
 AC_CONFIG_FILES([src/lib/libcec.pc])
-AC_OUTPUT([Makefile src/lib/Makefile src/testclient/Makefile])
+AC_OUTPUT([Makefile src/lib/Makefile src/testclient/Makefile src/cec_uinput/Makefile])
 
 cat <<EOB
 
