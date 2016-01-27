@@ -81,15 +81,15 @@ int CecAlert(void *cbParam, const libcec_alert type, const libcec_parameter para
 
 int main (int argc, char *argv[])
 {
-	for (int i = 0; i < argc; i++) {
-		printf("argv[%d] == %s\n", i, argv[i]);
-	}
-
-	printf("creating configuration\n");
 	libcec_configuration g_config;
 	g_config.deviceTypes.Add(CEC_DEVICE_TYPE_RECORDING_DEVICE);
 	strcpy(g_config.strDeviceName, "myosdname");
+	if (1 < argc)
+	        strcpy(g_config.strDeviceName, argv[1]);
+
 	g_config.bActivateSource     = 1;
+	if (2 < argc)
+		g_config.iPhysicalAddress = strtoul(argv[2], 0, 0);;
 
 	ICECCallbacks g_callbacks;
 	g_callbacks.CBCecLogMessage  = &CecLogMessage;
@@ -105,11 +105,9 @@ int main (int argc, char *argv[])
 		printf("no devices found\n");
 		return 1;
 	}
-	printf("%d devices found\n", found);
 	if (!g_parser->Open(devices[0].comm)){
 		printf("Error opening %s\n", devices[0].comm);
 	}
-	printf("device %s opened\n", devices[0].comm);
 
 	while (1)
 	{
