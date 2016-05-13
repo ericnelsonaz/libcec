@@ -221,7 +221,7 @@ int main (int argc, char *argv[])
 	if (1 < argc)
 	        strcpy(data.config.strDeviceName, argv[1]);
 
-	data.config.bActivateSource     = 1;
+	data.config.bActivateSource     = 0;
 	if (2 < argc)
 		data.config.iPhysicalAddress = strtoul(argv[2], 0, 0);;
 
