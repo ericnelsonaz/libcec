@@ -59,6 +59,7 @@ using namespace PLATFORM;
 typedef struct {
     libcec_configuration config;
     ICECCallbacks callbacks;
+    ICECAdapter* adapter;
     int uifd;
 } app_data_t ;
 
@@ -251,6 +252,10 @@ int CecCommand(void *cbParam, const cec_command command)
             usleep(10000);
             ev.value = 0;
             send_key(*data, ev);
+            if (ev.code == KEY_LEFTBRACE) {
+                /* power on. select our output */
+                data->adapter->SetActiveSource();
+            }
         }
     } else
         printf("not TV\n");
@@ -289,7 +294,7 @@ int main (int argc, char *argv[])
     data.config.callbacks           = &data.callbacks;
     data.config.callbackParam   = &data;
 
-    ICECAdapter* adapter = LibCecInitialise(&data.config);
+    ICECAdapter* adapter = data.adapter = LibCecInitialise(&data.config);
     cec_adapter devices[10];
     uint8_t found = adapter->FindAdapters(devices, 10, NULL);
     if (found <= 0) {
