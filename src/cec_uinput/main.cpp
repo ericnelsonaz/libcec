@@ -68,11 +68,16 @@ using namespace PLATFORM;
 
 #define ARRAY_SIZE(__arr) (sizeof(__arr)/sizeof((__arr[0])))
 
+#define STATE_UNKNOWN   -1
+#define STATE_OFF       0
+#define STATE_ON        1
+
 typedef struct {
     libcec_configuration config;
     ICECCallbacks callbacks;
     ICECAdapter* adapter;
     int uifd;
+    int tv_state;
 } app_data_t ;
 
 int CecLogMessage(void *cbParam, const cec_log_message message)
@@ -220,7 +225,7 @@ int CecKeyPress(void *cbParam, const cec_keypress key)
 
 int CecCommand(void *cbParam, const cec_command command)
 {
-    app_data_t const *data = (app_data_t const *)cbParam;
+    app_data_t *data = (app_data_t *)cbParam;
     struct input_event ev;
     ev.type = EV_KEY;
     ev.code = KEY_RESERVED;
@@ -264,10 +269,14 @@ int CecCommand(void *cbParam, const cec_command command)
             usleep(10000);
             ev.value = 0;
             send_key(*data, ev);
-            if (ev.code == KEY_POWERON) {
+            if ((ev.code == KEY_POWERON)
+                &&
+                (data->tv_state < STATE_ON)) {
                 /* power on. select our output */
                 data->adapter->SetActiveSource();
             }
+            data->tv_state = (KEY_POWEROFF == ev.code)
+                            ? STATE_OFF : STATE_ON;
         }
     } else
         printf("not TV\n");
@@ -291,6 +300,7 @@ int main (int argc, char *argv[])
     strcpy(g_config.strDeviceName, "myosdname");
     app_data_t data;
 
+    data.tv_state = STATE_UNKNOWN;
     data.config.deviceTypes.Add(CEC_DEVICE_TYPE_RECORDING_DEVICE);
     if (1 < argc)
         strcpy(data.config.strDeviceName, argv[1]);
