@@ -54,6 +54,18 @@ using namespace PLATFORM;
 
 #define CEC_CONFIG_VERSION CEC_CLIENT_VERSION_CURRENT;
 
+/*
+ * Many keys don't pass transparently through to our app,
+ * so hack around this by using placeholders for power on
+ * and power off events.
+ *
+ * When they hit Javascript, the event.keyCode value will be
+ *  221 for power-off and
+ *  219 for power-on
+ */
+#define KEY_POWERON KEY_LEFTBRACE
+#define KEY_POWEROFF KEY_RIGHTBRACE
+
 #define ARRAY_SIZE(__arr) (sizeof(__arr)/sizeof((__arr[0])))
 
 typedef struct {
@@ -153,8 +165,8 @@ key_map_t const key_mapping[] = {
     { CEC_USER_CONTROL_CODE_SELECT_AV_INPUT_FUNCTION,       KEY_RESERVED },
     { CEC_USER_CONTROL_CODE_SELECT_AUDIO_INPUT_FUNCTION,    KEY_AUDIO },
     { CEC_USER_CONTROL_CODE_POWER_TOGGLE_FUNCTION,          KEY_POWER },
-    { CEC_USER_CONTROL_CODE_POWER_OFF_FUNCTION,             KEY_POWER },
-    { CEC_USER_CONTROL_CODE_POWER_ON_FUNCTION,              KEY_POWER },
+    { CEC_USER_CONTROL_CODE_POWER_OFF_FUNCTION,             KEY_POWEROFF },
+    { CEC_USER_CONTROL_CODE_POWER_ON_FUNCTION,              KEY_POWERON },
     { CEC_USER_CONTROL_CODE_F1_BLUE,                        KEY_F1 },
     { CEC_USER_CONTROL_CODE_F2_RED,                         KEY_F2 },
     { CEC_USER_CONTROL_CODE_F3_GREEN,                       KEY_F3 },
@@ -223,26 +235,26 @@ int CecCommand(void *cbParam, const cec_command command)
         printf("%s: message from TV\n", __func__);
         if (CEC_OPCODE_STANDBY == command.opcode) {
             printf("--- standby\n");
-            ev.code = KEY_RIGHTBRACE;
+            ev.code = KEY_POWEROFF;
         } else if (CEC_OPCODE_ROUTING_CHANGE == command.opcode) {
             printf("--- routing change\n");
             uint16_t iNewAddress = ((uint16_t)command.parameters[2] << 8) | ((uint16_t)command.parameters[3]);
             printf("new active route 0x%04x\n", iNewAddress);
             if (CEC_DEVICE_TYPE_TV == command.parameters[3]) {
                 printf("--- TV is active\n");
-                ev.code = KEY_LEFTBRACE;
+                ev.code = KEY_POWERON;
             }
         } else if (CEC_OPCODE_REPORT_POWER_STATUS == command.opcode) {
             cec_power_status powerStatus = (cec_power_status)command.parameters[0];
             bool on = (CEC_POWER_STATUS_ON == powerStatus);
             printf("--- power status %d (%s)\n", powerStatus, on ? "on" : "off or standby");
-            ev.code = on ? KEY_LEFTBRACE : KEY_RIGHTBRACE;
+            ev.code = on ? KEY_POWERON : KEY_POWEROFF;
         } else if (CEC_OPCODE_ACTIVE_SOURCE == command.opcode) {
             uint16_t iAddress = ((uint16_t)command.parameters[0] << 8) | ((uint16_t)command.parameters[1]);
             printf("--- set active source %d\n", iAddress);
             if (CEC_DEVICE_TYPE_TV == iAddress) {
                 printf("--- presume on here\n");
-                ev.code = KEY_LEFTBRACE;
+                ev.code = KEY_POWERON;
             }
         } else
             printf("unknown opcode 0x%x\n", command.opcode);
@@ -252,7 +264,7 @@ int CecCommand(void *cbParam, const cec_command command)
             usleep(10000);
             ev.value = 0;
             send_key(*data, ev);
-            if (ev.code == KEY_LEFTBRACE) {
+            if (ev.code == KEY_POWERON) {
                 /* power on. select our output */
                 data->adapter->SetActiveSource();
             }
@@ -324,8 +336,8 @@ int main (int argc, char *argv[])
     for (unsigned i=0; i < ARRAY_SIZE(key_mapping); i++) {
         ioctl(data.uifd, UI_SET_KEYBIT, key_mapping[i].input);
     }
-    ioctl(data.uifd, UI_SET_KEYBIT, KEY_LEFTBRACE);
-    ioctl(data.uifd, UI_SET_KEYBIT, KEY_RIGHTBRACE);
+    ioctl(data.uifd, UI_SET_KEYBIT, KEY_POWERON);
+    ioctl(data.uifd, UI_SET_KEYBIT, KEY_POWEROFF);
 
     struct uinput_user_dev uidev;
     memset(&uidev, 0, sizeof(uidev));
