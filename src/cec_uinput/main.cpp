@@ -41,6 +41,7 @@
 #include <string>
 #include <sstream>
 #include <signal.h>
+#include "../lib/CECTypeUtils.h"
 #include "../lib/platform/os.h"
 #include "../lib/implementations/CECCommandHandler.h"
 #include "../lib/platform/util/StdString.h"
@@ -165,6 +166,24 @@ key_map_t const key_mapping[] = {
     { CEC_USER_CONTROL_CODE_UNKNOWN,                        KEY_UNKNOWN },
 };
 
+struct input_event const sync_event = {
+    {0}, // time
+    EV_SYN, // type
+    0,      // code
+    0,      // value
+};
+
+static void send_key(app_data_t const &data,
+                     struct input_event const &ev)
+{
+    int count = write(data.uifd, &ev, sizeof(ev));
+    if (count != sizeof(ev))
+        perror("write(input_event)");
+    else {
+        write(data.uifd, &sync_event, sizeof(sync_event));
+    }
+}
+
 int CecKeyPress(void *cbParam, const cec_keypress key)
 {
     app_data_t const *data = (app_data_t const *)cbParam;
@@ -181,23 +200,61 @@ int CecKeyPress(void *cbParam, const cec_keypress key)
         ev.type = EV_KEY;
         ev.code = inputcode;
         ev.value = (0 == key.duration);
-                int count = write(data->uifd, &ev, sizeof(ev));
-        if (count != sizeof(ev))
-            perror("write(input_event)");
-        else {
-            ev.type = EV_SYN;
-            ev.code = 0;
-            ev.value = 0;
-                        write(data->uifd, &ev, sizeof(ev));
-            printf("---sync\n");
-        }
+        send_key(*data, ev);
     }
     return 0;
 }
 
-int CecCommand(void *UNUSED(cbParam), const cec_command UNUSED(command))
+int CecCommand(void *cbParam, const cec_command command)
 {
-    printf("%s\n", __func__);
+    app_data_t const *data = (app_data_t const *)cbParam;
+    struct input_event ev;
+    ev.type = EV_KEY;
+    ev.code = KEY_RESERVED;
+    ev.value = 1;
+
+    printf("%s: cbParam %p, from %s to %s\n",
+           __func__,
+           data,
+           CCECTypeUtils::ToString(command.initiator),
+           CCECTypeUtils::ToString(command.destination));
+    if (CECDEVICE_TV == command.initiator) {
+        printf("%s: message from TV\n", __func__);
+        if (CEC_OPCODE_STANDBY == command.opcode) {
+            printf("--- standby\n");
+            ev.code = KEY_RIGHTBRACE;
+        } else if (CEC_OPCODE_ROUTING_CHANGE == command.opcode) {
+            printf("--- routing change\n");
+            uint16_t iNewAddress = ((uint16_t)command.parameters[2] << 8) | ((uint16_t)command.parameters[3]);
+            printf("new active route 0x%04x\n", iNewAddress);
+            if (CEC_DEVICE_TYPE_TV == command.parameters[3]) {
+                printf("--- TV is active\n");
+                ev.code = KEY_LEFTBRACE;
+            }
+        } else if (CEC_OPCODE_REPORT_POWER_STATUS == command.opcode) {
+            cec_power_status powerStatus = (cec_power_status)command.parameters[0];
+            bool on = (CEC_POWER_STATUS_ON == powerStatus);
+            printf("--- power status %d (%s)\n", powerStatus, on ? "on" : "off or standby");
+            ev.code = on ? KEY_LEFTBRACE : KEY_RIGHTBRACE;
+        } else if (CEC_OPCODE_ACTIVE_SOURCE == command.opcode) {
+            uint16_t iAddress = ((uint16_t)command.parameters[0] << 8) | ((uint16_t)command.parameters[1]);
+            printf("--- set active source %d\n", iAddress);
+            if (CEC_DEVICE_TYPE_TV == iAddress) {
+                printf("--- presume on here\n");
+                ev.code = KEY_LEFTBRACE;
+            }
+        } else
+            printf("unknown opcode 0x%x\n", command.opcode);
+
+        if (ev.code != KEY_RESERVED) {
+            send_key(*data, ev);
+            usleep(10000);
+            ev.value = 0;
+            send_key(*data, ev);
+        }
+    } else
+        printf("not TV\n");
+
     return 0;
 }
 
@@ -262,6 +319,8 @@ int main (int argc, char *argv[])
     for (unsigned i=0; i < ARRAY_SIZE(key_mapping); i++) {
         ioctl(data.uifd, UI_SET_KEYBIT, key_mapping[i].input);
     }
+    ioctl(data.uifd, UI_SET_KEYBIT, KEY_LEFTBRACE);
+    ioctl(data.uifd, UI_SET_KEYBIT, KEY_RIGHTBRACE);
 
     struct uinput_user_dev uidev;
     memset(&uidev, 0, sizeof(uidev));
