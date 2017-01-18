@@ -231,22 +231,19 @@ int CecCommand(void *cbParam, const cec_command command)
     ev.code = KEY_RESERVED;
     ev.value = 1;
 
-    printf("%s: cbParam %p, from %s to %s\n",
+    printf("%s: message from %s to %s\n",
            __func__,
-           data,
            CCECTypeUtils::ToString(command.initiator),
            CCECTypeUtils::ToString(command.destination));
     if (CECDEVICE_TV == command.initiator) {
-        printf("%s: message from TV\n", __func__);
         if (CEC_OPCODE_STANDBY == command.opcode) {
             printf("--- standby\n");
             ev.code = KEY_POWEROFF;
         } else if (CEC_OPCODE_ROUTING_CHANGE == command.opcode) {
-            printf("--- routing change\n");
             uint16_t iNewAddress = ((uint16_t)command.parameters[2] << 8) | ((uint16_t)command.parameters[3]);
-            printf("new active route 0x%04x\n", iNewAddress);
+            printf("--- new active route 0x%04x\n", iNewAddress);
             if (CEC_DEVICE_TYPE_TV == command.parameters[3]) {
-                printf("--- TV is active\n");
+                printf("--- TV is now active\n");
                 ev.code = KEY_POWERON;
             }
         } else if (CEC_OPCODE_REPORT_POWER_STATUS == command.opcode) {
@@ -258,13 +255,14 @@ int CecCommand(void *cbParam, const cec_command command)
             uint16_t iAddress = ((uint16_t)command.parameters[0] << 8) | ((uint16_t)command.parameters[1]);
             printf("--- set active source %d\n", iAddress);
             if (CEC_DEVICE_TYPE_TV == iAddress) {
-                printf("--- presume on here\n");
+                printf("--- power on here\n");
                 ev.code = KEY_POWERON;
             }
         } else
             printf("unknown opcode 0x%x\n", command.opcode);
 
         if (ev.code != KEY_RESERVED) {
+            printf("--- send key %d\n", ev.code);
             send_key(*data, ev);
             usleep(10000);
             ev.value = 0;
@@ -273,6 +271,7 @@ int CecCommand(void *cbParam, const cec_command command)
                 &&
                 (data->tv_state < STATE_ON)) {
                 /* power on. select our output */
+                printf("--- set the active source to our output\n");
                 data->adapter->SetActiveSource();
             }
             data->tv_state = (KEY_POWEROFF == ev.code)
