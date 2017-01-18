@@ -272,11 +272,11 @@ int main (int argc, char *argv[])
     libcec_configuration g_config;
     g_config.deviceTypes.Add(CEC_DEVICE_TYPE_RECORDING_DEVICE);
     strcpy(g_config.strDeviceName, "myosdname");
-        app_data_t data;
+    app_data_t data;
 
     data.config.deviceTypes.Add(CEC_DEVICE_TYPE_RECORDING_DEVICE);
     if (1 < argc)
-            strcpy(data.config.strDeviceName, argv[1]);
+        strcpy(data.config.strDeviceName, argv[1]);
 
     data.config.bActivateSource     = 0;
     if (2 < argc)
