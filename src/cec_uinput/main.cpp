@@ -31,6 +31,7 @@
 
 #include "../env.h"
 #include "../include/cec.h"
+#include "keymap.h"
 
 #include <linux/input.h>
 #include <linux/uinput.h>
@@ -38,9 +39,12 @@
 #include <fcntl.h>
 #include <iostream>
 #include <fstream>
+#include <limits.h>
 #include <string>
 #include <sstream>
 #include <signal.h>
+#include <stdlib.h>
+#include <syslog.h>
 #include "../lib/CECTypeUtils.h"
 #include "../lib/platform/os.h"
 #include "../lib/implementations/CECCommandHandler.h"
@@ -87,12 +91,7 @@ int CecLogMessage(void *cbParam, const cec_log_message message)
     return 0;
 }
 
-typedef struct {
-        cec_user_control_code   cec;
-    int         input;
-} key_map_t;
-
-key_map_t const key_mapping[] = {
+struct key_map_t default_key_mapping[] = {
     { CEC_USER_CONTROL_CODE_SELECT,                         KEY_SELECT },
     { CEC_USER_CONTROL_CODE_UP,                             KEY_UP },
     { CEC_USER_CONTROL_CODE_DOWN,                           KEY_DOWN },
@@ -184,6 +183,9 @@ key_map_t const key_mapping[] = {
     { CEC_USER_CONTROL_CODE_UNKNOWN,                        KEY_UNKNOWN },
 };
 
+static struct key_map_t *key_map = default_key_mapping;
+static unsigned num_keys = ARRAY_SIZE(default_key_mapping);
+
 struct input_event const sync_event = {
     {0}, // time
     EV_SYN, // type
@@ -202,24 +204,32 @@ static void send_key(app_data_t const &data,
     }
 }
 
+static int compare_key_map(const void *key, const void *mapent)
+{
+    struct key_map_t const *target = (struct key_map_t *)mapent;
+    cec_user_control_code code = *(cec_user_control_code const *)key;
+    return code-target->cec_code;
+}
+
 int CecKeyPress(void *cbParam, const cec_keypress key)
 {
     app_data_t const *data = (app_data_t const *)cbParam;
-    int inputcode = KEY_RESERVED;
-    for (unsigned i = 0; i < ARRAY_SIZE(key_mapping); i++) {
-        if (key.keycode == key_mapping[i].cec) {
-            inputcode = key_mapping[i].input;
-            break;
-        }
-    }
-    printf("%s: key 0x%02x, duration %u\n", __func__, key.keycode, key.duration);
-    if (KEY_RESERVED != inputcode) {
+    struct key_map_t *ent = (struct key_map_t *)
+                            bsearch(&key.keycode,
+                                    key_map,
+                                    num_keys,
+                                    sizeof(*key_map),
+                                    compare_key_map);
+    if (ent) {
         struct input_event ev;
         ev.type = EV_KEY;
-        ev.code = inputcode;
+        ev.code = ent->input_key;
         ev.value = (0 == key.duration);
         send_key(*data, ev);
-    }
+        syslog(LOG_INFO|LOG_USER, "cec 0x%02x -> 0x%02x", key.keycode, ent->input_key);
+    } else
+        syslog(LOG_INFO|LOG_USER, "no mapping for cec code 0x%02x", key.keycode);
+
     return 0;
 }
 
@@ -294,6 +304,7 @@ int CecAlert(void *cbParam, const libcec_alert type, const libcec_parameter para
 
 int main (int argc, char *argv[])
 {
+    openlog(0,0,0);
     libcec_configuration g_config;
     g_config.deviceTypes.Add(CEC_DEVICE_TYPE_RECORDING_DEVICE);
     strcpy(g_config.strDeviceName, "myosdname");
@@ -305,8 +316,24 @@ int main (int argc, char *argv[])
         strcpy(data.config.strDeviceName, argv[1]);
 
     data.config.bActivateSource     = 0;
-    if (2 < argc)
-        data.config.iPhysicalAddress = strtoul(argv[2], 0, 0);;
+    if (2 < argc) {
+        data.config.iPhysicalAddress = strtoul(argv[2], 0, 0);
+        if (3 < argc) {
+            struct key_map_t *map;
+            unsigned count = read_key_map(argv[3], &map);
+            if (count) {
+                char fullname[PATH_MAX];
+                syslog(LOG_INFO|LOG_USER, "using keys from %s",
+                       realpath(argv[3], fullname));
+                key_map = map;
+                num_keys = count;
+            }
+        }
+    }
+
+    if (key_map == default_key_mapping)
+        syslog(LOG_INFO|LOG_USER,
+               "using default (compiled-in) key mappings");
 
     data.callbacks.CBCecLogMessage  = &CecLogMessage;
     data.callbacks.CBCecKeyPress    = &CecKeyPress;
@@ -342,8 +369,8 @@ int main (int argc, char *argv[])
         return -1;
     }
 
-    for (unsigned i=0; i < ARRAY_SIZE(key_mapping); i++) {
-        ioctl(data.uifd, UI_SET_KEYBIT, key_mapping[i].input);
+    for (unsigned i=0; i < num_keys; i++) {
+        ioctl(data.uifd, UI_SET_KEYBIT, key_map[i].input_key);
     }
     ioctl(data.uifd, UI_SET_KEYBIT, KEY_POWERON);
     ioctl(data.uifd, UI_SET_KEYBIT, KEY_POWEROFF);
