@@ -1,4 +1,5 @@
 #include "uinput-keys.h"
+#include <linux/input.h>
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(*array))
 
