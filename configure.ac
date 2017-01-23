@@ -411,7 +411,13 @@ AC_SUBST([USE_P8_USB])
 AC_SUBST([USE_P8_USB_DETECT])
 AC_SUBST([USE_RPI_API])
 AC_CONFIG_FILES([src/lib/libcec.pc])
-AC_OUTPUT([Makefile src/lib/Makefile src/testclient/Makefile src/cec_uinput/Makefile src/cec-rawkeys/Makefile src/uinput-test/Makefile])
+AC_OUTPUT([Makefile src/lib/Makefile \
+	src/testclient/Makefile \
+	src/cec_uinput/Makefile \
+	src/cec-rawkeys/Makefile \
+	src/uinput-test/Makefile \
+	src/keymap-test/Makefile \
+])
 
 cat <<EOB
 

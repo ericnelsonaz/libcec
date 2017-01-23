@@ -7,7 +7,7 @@ extern struct string_table_t *cec_keys;
 extern unsigned num_cec_keys;
 
 /*
- * returns NULL 
+ * returns NULL if not found
  */
 extern char const *find_cec_key(unsigned key);
 

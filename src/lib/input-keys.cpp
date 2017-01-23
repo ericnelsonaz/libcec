@@ -250,3 +250,7 @@ static struct string_table_t keys[] = {
 
 struct string_table_t *input_keys = keys;
 unsigned num_input_keys = ARRAY_SIZE(keys);
+
+char const *find_input_key(unsigned key){
+	return find_string(key, input_keys, num_input_keys);
+}
