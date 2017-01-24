@@ -38,7 +38,7 @@ static int compare_map_nodes(const void *lhs,
 {
     struct key_map_t *lh = (struct key_map_t *)lhs;
     struct key_map_t *rh = (struct key_map_t *)rhs;
-    return lh->cec_code - rh->input_key;
+    return lh->cec_code - rh->cec_code;
 }
 
 unsigned read_key_map(char const *ctrlfile, struct key_map_t **map)
