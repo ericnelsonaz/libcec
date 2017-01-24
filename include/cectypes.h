@@ -732,6 +732,8 @@ typedef enum cec_user_control_code
   CEC_USER_CONTROL_CODE_AN_RETURN                   = 0x91, // return (Samsung)
   CEC_USER_CONTROL_CODE_AN_CHANNELS_LIST            = 0x96, // channels list (Samsung)
   CEC_USER_CONTROL_CODE_MAX                         = 0x96,
+  CEC_POWER_ON                                      = 0xFD,
+  CEC_POWER_OFF                                     = 0xFE,
   CEC_USER_CONTROL_CODE_UNKNOWN                     = 0xFF
 } cec_user_control_code;
 

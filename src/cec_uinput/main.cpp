@@ -179,7 +179,8 @@ struct key_map_t default_key_mapping[] = {
     { CEC_USER_CONTROL_CODE_DATA,                           KEY_DATABASE },
     { CEC_USER_CONTROL_CODE_AN_RETURN,                      KEY_EXIT },
     { CEC_USER_CONTROL_CODE_AN_CHANNELS_LIST,               KEY_RESERVED },
-    { CEC_USER_CONTROL_CODE_MAX,                            KEY_MAX },
+    { CEC_POWER_ON,                                         KEY_LEFTBRACE },
+    { CEC_POWER_OFF,                                        KEY_RIGHTBRACE },
     { CEC_USER_CONTROL_CODE_UNKNOWN,                        KEY_UNKNOWN },
 };
 
@@ -236,10 +237,7 @@ int CecKeyPress(void *cbParam, const cec_keypress key)
 int CecCommand(void *cbParam, const cec_command command)
 {
     app_data_t *data = (app_data_t *)cbParam;
-    struct input_event ev;
-    ev.type = EV_KEY;
-    ev.code = KEY_RESERVED;
-    ev.value = 1;
+    cec_user_control_code cec_code = CEC_USER_CONTROL_CODE_UNKNOWN;
 
     printf("%s: message from %s to %s\n",
            __func__,
@@ -248,43 +246,49 @@ int CecCommand(void *cbParam, const cec_command command)
     if (CECDEVICE_TV == command.initiator) {
         if (CEC_OPCODE_STANDBY == command.opcode) {
             printf("--- standby\n");
-            ev.code = KEY_POWEROFF;
+            cec_code = CEC_POWER_OFF;
         } else if (CEC_OPCODE_ROUTING_CHANGE == command.opcode) {
             uint16_t iNewAddress = ((uint16_t)command.parameters[2] << 8) | ((uint16_t)command.parameters[3]);
             printf("--- new active route 0x%04x\n", iNewAddress);
             if (CEC_DEVICE_TYPE_TV == command.parameters[3]) {
                 printf("--- TV is now active\n");
-                ev.code = KEY_POWERON;
+                cec_code = CEC_POWER_ON;
             }
         } else if (CEC_OPCODE_REPORT_POWER_STATUS == command.opcode) {
             cec_power_status powerStatus = (cec_power_status)command.parameters[0];
             bool on = (CEC_POWER_STATUS_ON == powerStatus);
             printf("--- power status %d (%s)\n", powerStatus, on ? "on" : "off or standby");
-            ev.code = on ? KEY_POWERON : KEY_POWEROFF;
+            cec_code = on ? CEC_POWER_ON : CEC_POWER_OFF;
         } else if (CEC_OPCODE_ACTIVE_SOURCE == command.opcode) {
             uint16_t iAddress = ((uint16_t)command.parameters[0] << 8) | ((uint16_t)command.parameters[1]);
             printf("--- set active source %d\n", iAddress);
             if (CEC_DEVICE_TYPE_TV == iAddress) {
                 printf("--- power on here\n");
-                ev.code = KEY_POWERON;
+                cec_code = CEC_POWER_ON;
             }
         } else
             printf("unknown opcode 0x%x\n", command.opcode);
 
-        if (ev.code != KEY_RESERVED) {
-            printf("--- send key %d\n", ev.code);
-            send_key(*data, ev);
-            usleep(10000);
-            ev.value = 0;
-            send_key(*data, ev);
-            if ((ev.code == KEY_POWERON)
+        if (cec_code != CEC_USER_CONTROL_CODE_UNKNOWN) {
+            cec_keypress keypress;
+            keypress.keycode = cec_code;
+
+            // press
+            keypress.duration = 10;
+            CecKeyPress(cbParam, keypress);
+
+            // release
+            keypress.duration = 0;
+            CecKeyPress(cbParam, keypress);
+
+            if ((cec_code == CEC_POWER_ON)
                 &&
                 (data->tv_state < STATE_ON)) {
                 /* power on. select our output */
                 printf("--- set the active source to our output\n");
                 data->adapter->SetActiveSource();
             }
-            data->tv_state = (KEY_POWEROFF == ev.code)
+            data->tv_state = (cec_code == CEC_POWER_OFF)
                             ? STATE_OFF : STATE_ON;
         }
     } else
@@ -372,8 +376,6 @@ int main (int argc, char *argv[])
     for (unsigned i=0; i < num_keys; i++) {
         ioctl(data.uifd, UI_SET_KEYBIT, key_map[i].input_key);
     }
-    ioctl(data.uifd, UI_SET_KEYBIT, KEY_POWERON);
-    ioctl(data.uifd, UI_SET_KEYBIT, KEY_POWEROFF);
 
     struct uinput_user_dev uidev;
     memset(&uidev, 0, sizeof(uidev));
