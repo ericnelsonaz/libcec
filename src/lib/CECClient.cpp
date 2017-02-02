@@ -1509,6 +1509,17 @@ void CCECClient::CallbackSourceActivated(bool bActivated, const cec_logical_addr
     m_configuration.callbacks->CBCecSourceActivated(m_configuration.callbackParam, logicalAddress, bActivated ? 1 : 0);
 }
 
+void CCECClient::PowerStateChanged(cec_device_type type, cec_logical_address addr, cec_power_status status)
+{
+  CLockObject lock(m_cbMutex);
+  if (m_configuration.callbacks &&
+      m_configuration.callbacks->CBCecPowerStateChanged)
+    m_configuration.callbacks->CBCecPowerStateChanged(m_configuration.callbackParam, type, addr, status);
+  else
+      printf("%s: no callback\n", __func__);
+
+}
+
 void CCECClient::CallbackAlert(const libcec_alert type, const libcec_parameter &param)
 {
   CLockObject lock(m_cbMutex);

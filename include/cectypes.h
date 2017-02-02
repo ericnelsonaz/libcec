@@ -1353,6 +1353,7 @@ typedef int (CEC_CDECL* CBCecConfigurationChangedType)(void*, const libcec_confi
 typedef int (CEC_CDECL* CBCecAlertType)(void*, const libcec_alert, const libcec_parameter);
 typedef int (CEC_CDECL* CBCecMenuStateChangedType)(void*, const cec_menu_state);
 typedef void (CEC_CDECL* CBCecSourceActivatedType)(void*, const cec_logical_address, const uint8_t);
+typedef void (CEC_CDECL* CBCecPowerStateChangedType)(void *, cec_device_type, cec_logical_address, cec_power_status);
 
 typedef struct ICECCallbacks
 {
@@ -1409,6 +1410,8 @@ typedef struct ICECCallbacks
    * @param bActivated 1 when activated, 0 when deactivated.
    */
   CBCecSourceActivatedType CBCecSourceActivated;
+
+  CBCecPowerStateChangedType CBCecPowerStateChanged;
 
 #ifdef __cplusplus
    ICECCallbacks(void) { Clear(); }

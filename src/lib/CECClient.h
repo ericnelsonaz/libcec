@@ -185,6 +185,7 @@ namespace CEC
     virtual void                  CheckKeypressTimeout(void);
     virtual void                  SourceActivated(const cec_logical_address logicalAddress);
     virtual void                  SourceDeactivated(const cec_logical_address logicalAddress);
+    virtual void                  PowerStateChanged(cec_device_type, cec_logical_address, cec_power_status);
 
   protected:
     /*!

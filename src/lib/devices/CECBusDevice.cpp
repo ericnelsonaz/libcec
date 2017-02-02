@@ -700,6 +700,11 @@ void CCECBusDevice::SetPowerStatus(const cec_power_status powerStatus)
     m_iLastPowerStateUpdate = GetTimeMs();
     LIB_CEC->AddLog(CEC_LOG_DEBUG, "%s (%X): power status changed from '%s' to '%s'", GetLogicalAddressName(), m_iLogicalAddress, ToString(m_powerStatus), ToString(powerStatus));
     m_powerStatus = powerStatus;
+    CCECClient *client = m_processor->GetClient(CECDEVICE_RECORDINGDEVICE1);
+    if (client)
+        client->PowerStateChanged(GetType(), GetLogicalAddress(), powerStatus);
+    else
+        printf("%s: no client %s\n", __func__, ToString(powerStatus));
   }
 }
 
