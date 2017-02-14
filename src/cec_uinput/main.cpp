@@ -84,10 +84,10 @@ typedef struct {
     int tv_state;
 } app_data_t ;
 
-int CecLogMessage(void *cbParam, const cec_log_message message)
+int CecLogMessage(void *, const cec_log_message message)
 {
-    printf("%s: level %d, message %s, cbParam %p\n", __func__,
-           message.level, message.message, cbParam);
+    printf("cec-uinput: L%d: %s\n",
+           message.level, message.message);
     return 0;
 }
 
