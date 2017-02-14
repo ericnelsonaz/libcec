@@ -234,6 +234,31 @@ int CecKeyPress(void *cbParam, const cec_keypress key)
     return 0;
 }
 
+static void power_onoff_event(app_data_t *data, cec_user_control_code cec_code)
+{
+    cec_keypress keypress;
+    keypress.keycode = cec_code;
+
+    // press
+    keypress.duration = 10;
+    CecKeyPress(data, keypress);
+
+    // release
+    keypress.duration = 0;
+    CecKeyPress(data, keypress);
+
+    if ((cec_code == CEC_POWER_ON)
+        &&
+        (data->tv_state < STATE_ON)) {
+        /* power on. select our output */
+        printf("--- set the active source to our output\n");
+        data->adapter->SetActiveSource();
+    }
+    data->tv_state = (cec_code == CEC_POWER_OFF)
+                    ? STATE_OFF : STATE_ON;
+
+}
+
 int CecCommand(void *cbParam, const cec_command command)
 {
     app_data_t *data = (app_data_t *)cbParam;
@@ -270,31 +295,31 @@ int CecCommand(void *cbParam, const cec_command command)
             printf("unknown opcode 0x%x\n", command.opcode);
 
         if (cec_code != CEC_USER_CONTROL_CODE_UNKNOWN) {
-            cec_keypress keypress;
-            keypress.keycode = cec_code;
-
-            // press
-            keypress.duration = 10;
-            CecKeyPress(cbParam, keypress);
-
-            // release
-            keypress.duration = 0;
-            CecKeyPress(cbParam, keypress);
-
-            if ((cec_code == CEC_POWER_ON)
-                &&
-                (data->tv_state < STATE_ON)) {
-                /* power on. select our output */
-                printf("--- set the active source to our output\n");
-                data->adapter->SetActiveSource();
-            }
-            data->tv_state = (cec_code == CEC_POWER_OFF)
-                            ? STATE_OFF : STATE_ON;
+            power_onoff_event(data, cec_code);
         }
     } else
         printf("not TV\n");
 
     return 0;
+}
+
+void CecSourceActivated(void* cbParam, const cec_logical_address addr, const uint8_t status)
+{
+    printf("source activated: param %p, addr %d, status %d\n",
+           cbParam, addr, status);
+}
+
+void CecPowerStateChanged(void *cbParam, cec_device_type type, cec_logical_address addr, cec_power_status status)
+{
+    printf("power status change: param %p, type %d, addr %d, status %d\n",
+           cbParam, type, addr, status);
+
+    if (CEC_DEVICE_TYPE_TV == type) {
+        cec_user_control_code cec_code = (CEC_POWER_STATUS_ON == status)
+                                            ? CEC_POWER_ON
+                                            : CEC_POWER_OFF;
+        power_onoff_event((app_data_t *)cbParam, cec_code);
+    }
 }
 
 int CecAlert(void *cbParam, const libcec_alert type, const libcec_parameter param)
@@ -342,6 +367,8 @@ int main (int argc, char *argv[])
     data.callbacks.CBCecLogMessage  = &CecLogMessage;
     data.callbacks.CBCecKeyPress    = &CecKeyPress;
     data.callbacks.CBCecCommand     = &CecCommand;
+    data.callbacks.CBCecSourceActivated = &CecSourceActivated;
+    data.callbacks.CBCecPowerStateChanged = &CecPowerStateChanged;
     data.callbacks.CBCecAlert       = &CecAlert;
     data.config.callbacks           = &data.callbacks;
     data.config.callbackParam   = &data;
