@@ -418,9 +418,22 @@ int main (int argc, char *argv[])
         return -1;
     }
 
+    bool was_offline = !adapter->IsActiveDevice(CECDEVICE_TV);
     while (1)
     {
-        CEvent::Sleep(50);
+        CEvent::Sleep(1000);
+        bool is_offline = !adapter->IsActiveDevice(CECDEVICE_TV);
+        if (was_offline && !is_offline) {
+            syslog(LOG_INFO|LOG_USER, "TV powered on\n");
+            adapter->Close();
+            if (!adapter->Open(devices[0].comm)) {
+                syslog(LOG_INFO|LOG_USER, "Error opening %s\n", devices[0].comm);
+                break;
+            }
+        }
+        if (is_offline && !was_offline)
+            syslog(LOG_INFO|LOG_USER, "TV is offline\n");
+        was_offline = is_offline;
     }
 
     adapter->Close();
