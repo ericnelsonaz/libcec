@@ -226,7 +226,14 @@ int CecKeyPress(void *cbParam, const cec_keypress key)
         ev.type = EV_KEY;
         ev.code = ent->input_key;
         ev.value = (0 == key.duration);
-        send_key(*data, ev);
+	if (CEC_USER_CONTROL_CODE_AN_RETURN != key.keycode) {
+		send_key(*data, ev);
+	} else {
+		ev.value = 1;
+		send_key(*data, ev);
+		ev.value = 0;
+		send_key(*data, ev);
+	}
         syslog(LOG_INFO|LOG_USER, "cec 0x%02x -> 0x%02x", key.keycode, ent->input_key);
     } else
         syslog(LOG_INFO|LOG_USER, "no mapping for cec code 0x%02x", key.keycode);
